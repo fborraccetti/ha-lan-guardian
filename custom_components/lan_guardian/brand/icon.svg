@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- scudo -->
+  <path d="M256 16 L460 92 V236 C460 362 374 452 256 496 C138 452 52 362 52 236 V92 Z"
+        fill="#1A8BD6"/>
+  <path d="M256 52 L428 116 V238 C428 344 357 421 256 460 C155 421 84 344 84 238 V116 Z"
+        fill="none" stroke="#5DB4EA" stroke-width="8"/>
+  <!-- rete: hub centrale + 3 nodi -->
+  <g stroke="#FFFFFF" stroke-width="18" stroke-linecap="round" fill="none">
+    <line x1="256" y1="236" x2="256" y2="146"/>
+    <line x1="256" y1="236" x2="170" y2="320"/>
+    <line x1="256" y1="236" x2="342" y2="320"/>
+  </g>
+  <g fill="#FFFFFF">
+    <circle cx="256" cy="236" r="40"/>
+    <circle cx="256" cy="140" r="30"/>
+    <circle cx="164" cy="326" r="30"/>
+    <circle cx="348" cy="326" r="30"/>
+  </g>
+  <!-- spunta di stato sull'hub -->
+  <path d="M238 237 L251 250 L276 222" fill="none" stroke="#1A8BD6"
+        stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

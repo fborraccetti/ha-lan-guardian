@@ -1,0 +1,461 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "LAN Guardian",
+        "description": "Rete da sorvegliare. Sono supportate solo sottoreti IPv4 fino a /22.",
+        "data": {
+          "subnet": "Sottorete (CIDR)",
+          "gateway": "Gateway"
+        },
+        "data_description": {
+          "subnet": "Ad esempio 192.168.1.0/24.",
+          "gateway": "L'indirizzo del router, usato per i controlli di latenza e perdita."
+        }
+      }
+    },
+    "error": {
+      "invalid_subnet": "Sottorete IPv4 non valida.",
+      "subnet_too_large": "Sottorete troppo grande: usa /22 o più piccola.",
+      "invalid_ip": "Indirizzo IP non valido.",
+      "gateway_outside_subnet": "Il gateway non è nella sottorete."
+    },
+    "abort": {
+      "single_instance_allowed": "LAN Guardian è già configurato."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opzioni LAN Guardian",
+        "menu_options": {
+          "scan": "Scansione rete",
+          "health": "Salute rete",
+          "tasmota": "Tasmota",
+          "tasmota_device": "Password di un singolo Tasmota",
+          "notify": "Notifiche"
+        }
+      },
+      "scan": {
+        "title": "Scansione rete",
+        "data": {
+          "scan_interval": "Intervallo di scansione",
+          "random_mac_mode": "MAC randomizzati",
+          "critical_offline_minutes": "Dispositivo critico offline dopo",
+          "ping_concurrency": "Ping in parallelo"
+        },
+        "data_description": {
+          "random_mac_mode": "I telefoni ruotano il MAC: raggruppali in una voce, ignorali o tracciali come dispositivi singoli."
+        }
+      },
+      "health": {
+        "title": "Salute rete",
+        "data": {
+          "health_interval": "Intervallo dei controlli",
+          "internet_target": "Destinazione Internet",
+          "loss_threshold": "Soglia di allarme perdita pacchetti",
+          "dns_servers": "Server DNS",
+          "dns_test_domain": "Dominio da risolvere",
+          "adblock_test_domain": "Dominio pubblicitario che deve risultare bloccato",
+          "security_interval_hours": "Controllo sicurezza Tasmota ogni"
+        },
+        "data_description": {
+          "dns_servers": "Il primo è il DNS primario: se smette di rispondere viene aperta una segnalazione. Se vuoto viene controllato il gateway.",
+          "adblock_test_domain": "Lascia vuoto per saltare il controllo di blocco di Pi-hole.",
+          "security_interval_hours": "Cerca i Tasmota in rete via HTTP e segnala quelli senza WebPassword."
+        }
+      },
+      "tasmota": {
+        "title": "Tasmota",
+        "data": {
+          "tasmota_password": "WebPassword globale",
+          "tasmota_concurrency": "Richieste parallele ai Tasmota",
+          "tasmota_signal_drop": "Allarme calo del segnale",
+          "backup_interval_days": "Backup ogni",
+          "backup_retention": "Backup da conservare per dispositivo",
+          "tasmota_import_mqtt": "Importa i Tasmota dell'integrazione MQTT",
+          "tasmota_warn_no_password": "Avvisa per i Tasmota senza WebPassword",
+          "generate_password": "Genera una password casuale"
+        },
+        "data_description": {
+          "tasmota_password": "Usata per i dispositivi con WebPassword (utente admin) e applicata a quelli che non ce l'hanno. Da 8 a 32 caratteri, senza spazi né ';'. Lascia vuoto per mantenere quella attuale. Non viene mai scritta nei log.",
+          "tasmota_signal_drop": "Punti percentuali che il segnale deve perdere rispetto al suo livello abituale (media delle ultime 24 ore) per far scattare l'allarme.",
+          "tasmota_import_mqtt": "Aggiunge i dispositivi già noti all'integrazione ufficiale tasmota, anche se non rispondono alla scansione HTTP.",
+          "tasmota_warn_no_password": "Apre una segnalazione di sicurezza con l'elenco dei Tasmota che accettano comandi senza password.",
+          "generate_password": "Crea una password sicura, te la mostra una volta e la salva. Poi applicala ai dispositivi con l'azione lan_guardian.apply_tasmota_password o dalla segnalazione di sicurezza."
+        }
+      },
+      "notify": {
+        "title": "Notifiche",
+        "data": {
+          "notify_persistent": "Notifiche persistenti",
+          "notify_entities": "Entità di notifica",
+          "notify_service": "Azione di notifica",
+          "notify_cooldown_minutes": "Pausa minima per tipo di evento"
+        },
+        "data_description": {
+          "notify_entities": "I messaggi sono inviati con notify.send_message (ad esempio l'entità del bot Telegram).",
+          "notify_service": "Azione legacy opzionale, ad esempio notify.mobile_app_telefono."
+        }
+      },
+      "tasmota_device": {
+        "title": "Password di un singolo Tasmota",
+        "description": "Sovrascrive la password globale per un dispositivo. Lascia vuoto per tornare a quella globale. 🔑 = password dedicata già impostata.",
+        "data": {
+          "device": "Dispositivo",
+          "tasmota_password": "WebPassword"
+        }
+      },
+      "tasmota_password_generated": {
+        "title": "Password generata",
+        "description": "Nuova WebPassword: **{password}**\n\nCopiala ora in un posto sicuro: non verrà più mostrata. Ti serve per entrare nell'interfaccia web dei Tasmota (utente `admin`). Conferma per salvarla."
+      }
+    },
+    "error": {
+      "invalid_host": "Nome host o indirizzo IP non valido.",
+      "invalid_ip": "Indirizzo IP non valido.",
+      "invalid_service": "Usa il formato dominio.azione, ad esempio notify.mobile_app_telefono.",
+      "password_length": "Da 8 a 32 caratteri.",
+      "password_chars": "Solo caratteri ASCII stampabili, senza spazi né ';'.",
+      "password_reserved": "0 e 1 sono valori riservati di Tasmota."
+    },
+    "abort": {
+      "no_tasmota": "Nessun Tasmota trovato finora: attendi la prima scansione."
+    }
+  },
+  "selector": {
+    "random_mac_mode": {
+      "options": {
+        "group": "Raggruppa in una voce",
+        "ignore": "Ignora",
+        "track": "Traccia singolarmente"
+      }
+    },
+    "category": {
+      "options": {
+        "network": "Apparato di rete",
+        "server": "Server / VM",
+        "computer": "Computer",
+        "phone": "Telefono / tablet",
+        "media": "Media / altoparlante",
+        "camera": "Telecamera",
+        "tasmota": "Tasmota",
+        "iot": "Altro IoT",
+        "other": "Altro"
+      }
+    },
+    "status": {
+      "options": {
+        "known": "Noto",
+        "ignored": "Ignorato",
+        "new": "Nuovo"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "devices_online": {
+        "name": "Dispositivi online"
+      },
+      "unknown_devices": {
+        "name": "Dispositivi sconosciuti"
+      },
+      "gateway_packet_loss": {
+        "name": "Perdita pacchetti gateway"
+      },
+      "gateway_latency": {
+        "name": "Latenza gateway"
+      },
+      "gateway_latency_max": {
+        "name": "Latenza massima gateway"
+      },
+      "internet_packet_loss": {
+        "name": "Perdita pacchetti Internet"
+      },
+      "internet_latency": {
+        "name": "Latenza Internet"
+      },
+      "internet_latency_max": {
+        "name": "Latenza massima Internet"
+      },
+      "dns_resolve_time": {
+        "name": "Tempo risoluzione DNS {server}"
+      },
+      "tasmota_without_password": {
+        "name": "Tasmota senza password"
+      },
+      "tasmota_wifi_signal": {
+        "name": "Segnale Wi-Fi"
+      },
+      "tasmota_wifi_rssi": {
+        "name": "RSSI Wi-Fi"
+      },
+      "tasmota_last_restart": {
+        "name": "Ultimo riavvio"
+      },
+      "tasmota_restart_reason": {
+        "name": "Motivo ultimo riavvio"
+      },
+      "tasmota_restarts_24h": {
+        "name": "Riavvii in 24 ore"
+      },
+      "tasmota_last_backup": {
+        "name": "Ultimo backup"
+      },
+      "ip": {
+        "name": "Indirizzo IP"
+      },
+      "last_seen": {
+        "name": "Ultima volta visto"
+      },
+      "first_seen": {
+        "name": "Prima volta visto"
+      },
+      "hostname": {
+        "name": "Hostname"
+      },
+      "vendor": {
+        "name": "Produttore"
+      }
+    },
+    "binary_sensor": {
+      "internet": {
+        "name": "Internet"
+      },
+      "adblock": {
+        "name": "Blocco pubblicità attivo"
+      },
+      "dns_server": {
+        "name": "DNS {server}"
+      }
+    },
+    "button": {
+      "backup_now": {
+        "name": "Backup ora"
+      },
+      "apply_password": {
+        "name": "Applica WebPassword"
+      },
+      "forget": {
+        "name": "Dimentica dispositivo"
+      }
+    },
+    "switch": {
+      "critical": {
+        "name": "Critico"
+      }
+    },
+    "select": {
+      "category": {
+        "name": "Categoria",
+        "state": {
+          "network": "Apparato di rete",
+          "server": "Server / VM",
+          "computer": "Computer",
+          "phone": "Telefono / tablet",
+          "media": "Media / altoparlante",
+          "camera": "Telecamera",
+          "tasmota": "Tasmota",
+          "iot": "Altro IoT",
+          "other": "Altro"
+        }
+      },
+      "status": {
+        "name": "Stato",
+        "state": {
+          "known": "Noto",
+          "ignored": "Ignorato",
+          "new": "Nuovo"
+        }
+      }
+    },
+    "update": {
+      "firmware": {
+        "name": "Firmware"
+      }
+    }
+  },
+  "issues": {
+    "new_device": {
+      "title": "Nuovo dispositivo in rete: {name}",
+      "fix_flow": {
+        "step": {
+          "init": {
+            "title": "Nuovo dispositivo",
+            "description": "MAC {mac}, IP {ip}, produttore {vendor}, hostname {hostname}.",
+            "menu_options": {
+              "approve": "Approva e assegna un nome",
+              "ignore": "Ignora questo dispositivo"
+            }
+          },
+          "approve": {
+            "title": "Approva dispositivo",
+            "description": "MAC {mac}, IP {ip}, produttore {vendor}.",
+            "data": {
+              "name": "Nome",
+              "category": "Categoria",
+              "critical": "Critico"
+            },
+            "data_description": {
+              "critical": "Avvisa se resta offline e crea il sensore di connettività."
+            }
+          }
+        },
+        "abort": {
+          "device_gone": "Il dispositivo non è più nell'inventario."
+        }
+      }
+    },
+    "critical_offline": {
+      "title": "Dispositivo critico offline: {name}",
+      "description": "{name} ({ip}, {mac}) non risponde dalle {last_seen}. Verifica alimentazione e segnale Wi-Fi. La segnalazione si chiude da sola quando torna online."
+    },
+    "mac_multiple_ips": {
+      "title": "MAC su più indirizzi IP: {name}",
+      "description": "{mac} risponde su {ips}. Può essere un bridge/repeater legittimo, ma anche ARP spoofing. La segnalazione si chiude quando il MAC torna su un solo IP."
+    },
+    "gateway_mac_changed": {
+      "title": "Il MAC del gateway è cambiato",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Accetta il nuovo MAC del gateway",
+            "description": "Il gateway {ip} risponde con {current} invece di {previous}. Conferma solo se hai sostituito o resettato il router: altrimenti qualcuno potrebbe intercettare il traffico (ARP spoofing)."
+          }
+        }
+      }
+    },
+    "dns_primary_down": {
+      "title": "Il DNS primario {server} non risponde",
+      "description": "Il server DNS {server} non risponde da almeno due controlli. I dispositivi che lo usano (tutta la rete, se è distribuito dal DHCP) non risolvono i nomi. Verifica il server DNS."
+    },
+    "gateway_packet_loss": {
+      "title": "Perdita di pacchetti verso il gateway",
+      "description": "Perdita del {loss}% verso {ip} (soglia {threshold}%) da almeno due controlli. Controlla il cavo di rete di Home Assistant e il carico del router."
+    },
+    "adblock_inactive": {
+      "title": "Pi-hole non blocca la pubblicità",
+      "description": "{server} risolve {domain} in {addresses}. Il blocco potrebbe essere disattivato o le liste non aggiornate."
+    },
+    "tasmota_no_password": {
+      "title": "{count} Tasmota senza WebPassword",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Imposta la WebPassword",
+            "description": "Questi dispositivi accettano qualunque comando HTTP da chiunque sia sulla rete, compresi riavvio, reset e firmware: {devices}.\n\nLa password salvata in LAN Guardian verrà impostata su {count} dispositivi: {devices}.\n\nMQTT e l'integrazione Tasmota non cambiano; l'interfaccia web chiederà utente `admin` e la password. L'esito arriva come notifica."
+          }
+        },
+        "abort": {
+          "no_password": "Prima salva una WebPassword in Opzioni → Tasmota (scrivila o generala), poi torna qui."
+        }
+      }
+    },
+    "tasmota_signal_drop": {
+      "title": "Segnale Wi-Fi dei Tasmota calato",
+      "description": "Segnale calato di {threshold} punti o più rispetto al livello abituale (abituale → recente): {devices}. Controlla l'access point o il repeater a cui si collega il dispositivo e cosa è stato spostato vicino. Il livello abituale si adegua in circa un giorno, quindi un cambiamento duraturo smette di essere segnalato."
+    },
+    "tasmota_frequent_restarts": {
+      "title": "{name} si riavvia spesso",
+      "description": "{name} ({ip}) si è riavviato {count} volte nelle ultime 24 ore. Ultimo motivo: {reason}. Cause tipiche: alimentazione instabile, watchdog per Wi-Fi debole, eccezioni del firmware."
+    },
+    "tasmota_auth_failed": {
+      "title": "Password Tasmota rifiutata",
+      "description": "Questi dispositivi rispondono 401 con la password configurata: {devices}. Imposta la password giusta nelle opzioni Tasmota di LAN Guardian (globale o per singolo dispositivo)."
+    }
+  },
+  "services": {
+    "scan_now": {
+      "name": "Scansiona ora",
+      "description": "Avvia subito una scansione della rete."
+    },
+    "update_device": {
+      "name": "Aggiorna dispositivo",
+      "description": "Modifica nome, categoria, criticità o stato di un dispositivo dell'inventario.",
+      "fields": {
+        "mac": {
+          "name": "MAC",
+          "description": "Indirizzo MAC del dispositivo."
+        },
+        "name": {
+          "name": "Nome",
+          "description": "Nome da mostrare."
+        },
+        "category": {
+          "name": "Categoria",
+          "description": "Tipo di dispositivo."
+        },
+        "critical": {
+          "name": "Critico",
+          "description": "Avvisa se resta offline."
+        },
+        "status": {
+          "name": "Stato",
+          "description": "Noto, ignorato o nuovo."
+        }
+      }
+    },
+    "forget_device": {
+      "name": "Dimentica dispositivo",
+      "description": "Rimuove il dispositivo dall'inventario: se ricompare sarà nuovo.",
+      "fields": {
+        "mac": {
+          "name": "MAC",
+          "description": "Indirizzo MAC del dispositivo."
+        }
+      }
+    },
+    "backup_tasmota": {
+      "name": "Backup Tasmota",
+      "description": "Scarica subito la configurazione dei Tasmota scelti (tutti se non ne scegli nessuno). I backup identici al precedente non vengono riscritti.",
+      "fields": {
+        "device_id": {
+          "name": "Dispositivi",
+          "description": "Tasmota da salvare."
+        }
+      }
+    },
+    "apply_tasmota_password": {
+      "name": "Imposta WebPassword Tasmota",
+      "description": "Imposta la password salvata nelle opzioni di LAN Guardian sui Tasmota scelti (tutti se non ne scegli nessuno). Salta quelli già protetti; la password non è un parametro, così non finisce nel database.",
+      "fields": {
+        "device_id": {
+          "name": "Dispositivi",
+          "description": "Tasmota su cui impostarla."
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "not_loaded": {
+      "message": "LAN Guardian non è caricato."
+    },
+    "unknown_device": {
+      "message": "Nessun dispositivo con MAC {mac} nell'inventario."
+    },
+    "tasmota_unknown": {
+      "message": "Tasmota sconosciuto o senza IP: {mac}."
+    },
+    "not_a_tasmota": {
+      "message": "Il dispositivo {device_id} non ha un indirizzo MAC."
+    },
+    "backup_failed": {
+      "message": "Backup di {name} non riuscito: {error}."
+    },
+    "backups_failed": {
+      "message": "{count} backup non riusciti, vedi la notifica."
+    },
+    "no_password": {
+      "message": "Nessuna WebPassword salvata: impostala in Opzioni → Tasmota."
+    },
+    "password_failed": {
+      "message": "WebPassword non verificata su: {devices}."
+    },
+    "firmware_unsupported": {
+      "message": "{name} non si può aggiornare da qui: firmware di sviluppo o compilato in proprio, immagine sconosciuta, oppure ultima release non ancora nota."
+    },
+    "firmware_failed": {
+      "message": "Aggiornamento firmware di {name} non riuscito: {error}"
+    }
+  }
+}

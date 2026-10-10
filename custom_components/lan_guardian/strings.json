@@ -1,0 +1,461 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "LAN Guardian",
+        "description": "Network to watch. Only IPv4 subnets up to /22 are supported.",
+        "data": {
+          "subnet": "Subnet (CIDR)",
+          "gateway": "Gateway"
+        },
+        "data_description": {
+          "subnet": "For example 192.168.1.0/24.",
+          "gateway": "The router address, used for latency and loss checks."
+        }
+      }
+    },
+    "error": {
+      "invalid_subnet": "Not a valid IPv4 subnet.",
+      "subnet_too_large": "Subnet too large: use /22 or smaller.",
+      "invalid_ip": "Not a valid IP address.",
+      "gateway_outside_subnet": "The gateway is not inside the subnet."
+    },
+    "abort": {
+      "single_instance_allowed": "LAN Guardian is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "LAN Guardian options",
+        "menu_options": {
+          "scan": "Network scan",
+          "health": "Network health",
+          "tasmota": "Tasmota",
+          "tasmota_device": "Password of a single Tasmota",
+          "notify": "Notifications"
+        }
+      },
+      "scan": {
+        "title": "Network scan",
+        "data": {
+          "scan_interval": "Scan interval",
+          "random_mac_mode": "Randomized MAC addresses",
+          "critical_offline_minutes": "Critical device offline after",
+          "ping_concurrency": "Parallel pings"
+        },
+        "data_description": {
+          "random_mac_mode": "Phones rotate their MAC: group them in one entry, ignore them, or track each one as a device."
+        }
+      },
+      "health": {
+        "title": "Network health",
+        "data": {
+          "health_interval": "Check interval",
+          "internet_target": "Internet target",
+          "loss_threshold": "Packet loss alert threshold",
+          "dns_servers": "DNS servers",
+          "dns_test_domain": "Domain to resolve",
+          "adblock_test_domain": "Ad domain that must be blocked",
+          "security_interval_hours": "Tasmota security check every"
+        },
+        "data_description": {
+          "dns_servers": "The first one is the primary DNS: an issue is raised if it stops answering. If empty, the gateway is checked.",
+          "adblock_test_domain": "Leave empty to skip the Pi-hole blocking check.",
+          "security_interval_hours": "Looks for Tasmota devices over HTTP and reports those without WebPassword."
+        }
+      },
+      "tasmota": {
+        "title": "Tasmota",
+        "data": {
+          "tasmota_password": "Global WebPassword",
+          "tasmota_concurrency": "Parallel requests to Tasmota devices",
+          "tasmota_signal_drop": "Signal drop alert",
+          "backup_interval_days": "Backup every",
+          "backup_retention": "Backups to keep per device",
+          "tasmota_import_mqtt": "Import Tasmota devices from the MQTT integration",
+          "tasmota_warn_no_password": "Warn about Tasmota devices without WebPassword",
+          "generate_password": "Generate a random password"
+        },
+        "data_description": {
+          "tasmota_password": "Used for devices with a WebPassword (user admin) and applied to those without one. 8 to 32 characters, no spaces or ';'. Leave empty to keep the current one. Never logged.",
+          "tasmota_signal_drop": "Percentage points the signal must lose against its usual level (average of the last 24 hours) to raise an alert.",
+          "tasmota_import_mqtt": "Adds devices known to the official tasmota integration, even if the HTTP scan did not find them.",
+          "tasmota_warn_no_password": "Raises a security issue listing the Tasmota devices that accept commands without a password.",
+          "generate_password": "Creates a strong password, shows it once and stores it. Then apply it to the devices with the lan_guardian.apply_tasmota_password action or from the security issue."
+        }
+      },
+      "notify": {
+        "title": "Notifications",
+        "data": {
+          "notify_persistent": "Persistent notifications",
+          "notify_entities": "Notify entities",
+          "notify_service": "Notify action",
+          "notify_cooldown_minutes": "Cooldown per event type"
+        },
+        "data_description": {
+          "notify_entities": "Messages are sent with notify.send_message (for example the Telegram bot entity).",
+          "notify_service": "Optional legacy action, for example notify.mobile_app_phone."
+        }
+      },
+      "tasmota_device": {
+        "title": "Password of a single Tasmota",
+        "description": "Overrides the global password for one device. Leave empty to go back to the global one. 🔑 = dedicated password already set.",
+        "data": {
+          "device": "Device",
+          "tasmota_password": "WebPassword"
+        }
+      },
+      "tasmota_password_generated": {
+        "title": "Generated password",
+        "description": "New WebPassword: **{password}**\n\nCopy it somewhere safe now: it will not be shown again. You need it to open the Tasmota web UI (user `admin`). Confirm to store it."
+      }
+    },
+    "error": {
+      "invalid_host": "Not a valid host name or IP address.",
+      "invalid_ip": "Not a valid IP address.",
+      "invalid_service": "Use the domain.action format, for example notify.mobile_app_phone.",
+      "password_length": "8 to 32 characters.",
+      "password_chars": "Printable ASCII only, no spaces or ';'.",
+      "password_reserved": "0 and 1 are reserved by Tasmota."
+    },
+    "abort": {
+      "no_tasmota": "No Tasmota found yet: wait for the first scan."
+    }
+  },
+  "selector": {
+    "random_mac_mode": {
+      "options": {
+        "group": "Group into one entry",
+        "ignore": "Ignore",
+        "track": "Track each one"
+      }
+    },
+    "category": {
+      "options": {
+        "network": "Network equipment",
+        "server": "Server / VM",
+        "computer": "Computer",
+        "phone": "Phone / tablet",
+        "media": "Media / speaker",
+        "camera": "Camera",
+        "tasmota": "Tasmota",
+        "iot": "Other IoT",
+        "other": "Other"
+      }
+    },
+    "status": {
+      "options": {
+        "known": "Known",
+        "ignored": "Ignored",
+        "new": "New"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "devices_online": {
+        "name": "Devices online"
+      },
+      "unknown_devices": {
+        "name": "Unknown devices"
+      },
+      "gateway_packet_loss": {
+        "name": "Gateway packet loss"
+      },
+      "gateway_latency": {
+        "name": "Gateway latency"
+      },
+      "gateway_latency_max": {
+        "name": "Gateway max latency"
+      },
+      "internet_packet_loss": {
+        "name": "Internet packet loss"
+      },
+      "internet_latency": {
+        "name": "Internet latency"
+      },
+      "internet_latency_max": {
+        "name": "Internet max latency"
+      },
+      "dns_resolve_time": {
+        "name": "DNS resolve time {server}"
+      },
+      "tasmota_without_password": {
+        "name": "Tasmota without password"
+      },
+      "tasmota_wifi_signal": {
+        "name": "Wi-Fi signal"
+      },
+      "tasmota_wifi_rssi": {
+        "name": "Wi-Fi RSSI"
+      },
+      "tasmota_last_restart": {
+        "name": "Last restart"
+      },
+      "tasmota_restart_reason": {
+        "name": "Last restart reason"
+      },
+      "tasmota_restarts_24h": {
+        "name": "Restarts in 24 hours"
+      },
+      "tasmota_last_backup": {
+        "name": "Last backup"
+      },
+      "ip": {
+        "name": "IP address"
+      },
+      "last_seen": {
+        "name": "Last seen"
+      },
+      "first_seen": {
+        "name": "First seen"
+      },
+      "hostname": {
+        "name": "Hostname"
+      },
+      "vendor": {
+        "name": "Vendor"
+      }
+    },
+    "binary_sensor": {
+      "internet": {
+        "name": "Internet"
+      },
+      "adblock": {
+        "name": "Ad blocking active"
+      },
+      "dns_server": {
+        "name": "DNS {server}"
+      }
+    },
+    "button": {
+      "backup_now": {
+        "name": "Back up now"
+      },
+      "apply_password": {
+        "name": "Apply WebPassword"
+      },
+      "forget": {
+        "name": "Forget device"
+      }
+    },
+    "switch": {
+      "critical": {
+        "name": "Critical"
+      }
+    },
+    "select": {
+      "category": {
+        "name": "Category",
+        "state": {
+          "network": "Network equipment",
+          "server": "Server / VM",
+          "computer": "Computer",
+          "phone": "Phone / tablet",
+          "media": "Media / speaker",
+          "camera": "Camera",
+          "tasmota": "Tasmota",
+          "iot": "Other IoT",
+          "other": "Other"
+        }
+      },
+      "status": {
+        "name": "Status",
+        "state": {
+          "known": "Known",
+          "ignored": "Ignored",
+          "new": "New"
+        }
+      }
+    },
+    "update": {
+      "firmware": {
+        "name": "Firmware"
+      }
+    }
+  },
+  "issues": {
+    "new_device": {
+      "title": "New device on the network: {name}",
+      "fix_flow": {
+        "step": {
+          "init": {
+            "title": "New device",
+            "description": "MAC {mac}, IP {ip}, vendor {vendor}, hostname {hostname}.",
+            "menu_options": {
+              "approve": "Approve and name it",
+              "ignore": "Ignore this device"
+            }
+          },
+          "approve": {
+            "title": "Approve device",
+            "description": "MAC {mac}, IP {ip}, vendor {vendor}.",
+            "data": {
+              "name": "Name",
+              "category": "Category",
+              "critical": "Critical"
+            },
+            "data_description": {
+              "critical": "Alert when it stays offline and enable its connectivity sensor."
+            }
+          }
+        },
+        "abort": {
+          "device_gone": "The device is no longer in the inventory."
+        }
+      }
+    },
+    "critical_offline": {
+      "title": "Critical device offline: {name}",
+      "description": "{name} ({ip}, {mac}) has not answered since {last_seen}. Check power and Wi-Fi signal. The issue closes by itself when it is back online."
+    },
+    "mac_multiple_ips": {
+      "title": "MAC on several IP addresses: {name}",
+      "description": "{mac} answers on {ips}. It may be a legitimate bridge or repeater, but also ARP spoofing. The issue closes when the MAC is back on a single IP."
+    },
+    "gateway_mac_changed": {
+      "title": "The gateway MAC address changed",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Accept the new gateway MAC",
+            "description": "Gateway {ip} answers with {current} instead of {previous}. Confirm only if you replaced or reset the router: otherwise someone may be intercepting traffic (ARP spoofing)."
+          }
+        }
+      }
+    },
+    "dns_primary_down": {
+      "title": "Primary DNS {server} is not answering",
+      "description": "DNS server {server} has not answered for at least two checks. Devices using it (the whole network, if DHCP hands it out) cannot resolve names. Check the DNS server."
+    },
+    "gateway_packet_loss": {
+      "title": "Packet loss towards the gateway",
+      "description": "{loss}% loss towards {ip} (threshold {threshold}%) for at least two checks. Check Home Assistant's network cable and the router load."
+    },
+    "adblock_inactive": {
+      "title": "Pi-hole is not blocking ads",
+      "description": "{server} resolves {domain} to {addresses}. Blocking may be disabled or the lists out of date."
+    },
+    "tasmota_no_password": {
+      "title": "{count} Tasmota devices without WebPassword",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Set the WebPassword",
+            "description": "These devices accept any HTTP command from anyone on the network, including restart, reset and firmware upload: {devices}.\n\nThe password stored in LAN Guardian will be set on {count} devices: {devices}.\n\nMQTT and the Tasmota integration are not affected; the web UI will ask for user `admin` and the password. The outcome arrives as a notification."
+          }
+        },
+        "abort": {
+          "no_password": "First store a WebPassword in Options → Tasmota (type or generate one), then come back here."
+        }
+      }
+    },
+    "tasmota_signal_drop": {
+      "title": "Tasmota Wi-Fi signal dropped",
+      "description": "Signal dropped by {threshold} points or more against its usual level (usual → recent): {devices}. Check the access point or repeater the device connects to and anything that moved near it. The usual level adapts within about a day, so a lasting change stops being reported."
+    },
+    "tasmota_frequent_restarts": {
+      "title": "{name} restarts often",
+      "description": "{name} ({ip}) restarted {count} times in the last 24 hours. Last reason: {reason}. Typical causes: unstable power supply, watchdog on weak Wi-Fi, firmware exceptions."
+    },
+    "tasmota_auth_failed": {
+      "title": "Tasmota password rejected",
+      "description": "These devices answer 401 with the configured password: {devices}. Set the right password in LAN Guardian's Tasmota options (global or per device)."
+    }
+  },
+  "services": {
+    "scan_now": {
+      "name": "Scan now",
+      "description": "Start a network scan now."
+    },
+    "update_device": {
+      "name": "Update device",
+      "description": "Change name, category, critical flag or status of an inventory device.",
+      "fields": {
+        "mac": {
+          "name": "MAC",
+          "description": "MAC address of the device."
+        },
+        "name": {
+          "name": "Name",
+          "description": "Display name."
+        },
+        "category": {
+          "name": "Category",
+          "description": "Device type."
+        },
+        "critical": {
+          "name": "Critical",
+          "description": "Alert when it stays offline."
+        },
+        "status": {
+          "name": "Status",
+          "description": "Known, ignored or new."
+        }
+      }
+    },
+    "forget_device": {
+      "name": "Forget device",
+      "description": "Remove the device from the inventory: if it shows up again it will be new.",
+      "fields": {
+        "mac": {
+          "name": "MAC",
+          "description": "MAC address of the device."
+        }
+      }
+    },
+    "backup_tasmota": {
+      "name": "Backup Tasmota",
+      "description": "Download the configuration of the chosen Tasmota devices now (all of them if none is chosen). Backups identical to the previous one are not written again.",
+      "fields": {
+        "device_id": {
+          "name": "Devices",
+          "description": "Tasmota devices to back up."
+        }
+      }
+    },
+    "apply_tasmota_password": {
+      "name": "Set Tasmota WebPassword",
+      "description": "Sets the password stored in LAN Guardian's options on the chosen Tasmota devices (all of them if none is chosen). Skips protected ones; the password is not a parameter, so it never reaches the database.",
+      "fields": {
+        "device_id": {
+          "name": "Devices",
+          "description": "Tasmota devices to set it on."
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "not_loaded": {
+      "message": "LAN Guardian is not loaded."
+    },
+    "unknown_device": {
+      "message": "No device with MAC {mac} in the inventory."
+    },
+    "tasmota_unknown": {
+      "message": "Unknown Tasmota or no IP: {mac}."
+    },
+    "not_a_tasmota": {
+      "message": "Device {device_id} has no MAC address."
+    },
+    "backup_failed": {
+      "message": "Backup of {name} failed: {error}."
+    },
+    "backups_failed": {
+      "message": "{count} backups failed, see the notification."
+    },
+    "no_password": {
+      "message": "No WebPassword stored: set one in Options → Tasmota."
+    },
+    "password_failed": {
+      "message": "WebPassword not verified on: {devices}."
+    },
+    "firmware_unsupported": {
+      "message": "{name} cannot be updated from here: development or self-built firmware, unknown image, or latest release not yet known."
+    },
+    "firmware_failed": {
+      "message": "Firmware update of {name} failed: {error}"
+    }
+  }
+}

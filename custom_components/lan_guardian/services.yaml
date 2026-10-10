@@ -1,0 +1,62 @@
+scan_now:
+
+update_device:
+  fields:
+    mac:
+      required: true
+      example: "aa:bb:cc:dd:ee:ff"
+      selector:
+        text:
+    name:
+      example: "Sensore gas"
+      selector:
+        text:
+    category:
+      selector:
+        select:
+          translation_key: category
+          options:
+            - network
+            - server
+            - computer
+            - phone
+            - media
+            - camera
+            - tasmota
+            - iot
+            - other
+    critical:
+      selector:
+        boolean:
+    status:
+      selector:
+        select:
+          translation_key: status
+          options:
+            - known
+            - ignored
+            - new
+
+forget_device:
+  fields:
+    mac:
+      required: true
+      example: "aa:bb:cc:dd:ee:ff"
+      selector:
+        text:
+
+backup_tasmota:
+  fields:
+    device_id:
+      selector:
+        device:
+          integration: lan_guardian
+          multiple: true
+
+apply_tasmota_password:
+  fields:
+    device_id:
+      selector:
+        device:
+          integration: lan_guardian
+          multiple: true

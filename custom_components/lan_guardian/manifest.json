@@ -1,0 +1,24 @@
+{
+  "domain": "lan_guardian",
+  "name": "LAN Guardian",
+  "after_dependencies": [
+    "zeroconf"
+  ],
+  "codeowners": [
+    "@fborraccetti"
+  ],
+  "config_flow": true,
+  "dependencies": [
+    "network"
+  ],
+  "documentation": "https://github.com/fborraccetti/ha-lan-guardian",
+  "integration_type": "service",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/fborraccetti/ha-lan-guardian/issues",
+  "requirements": [
+    "aiooui>=0.1.9",
+    "icmplib>=3.0.4"
+  ],
+  "single_config_entry": true,
+  "version": "0.6.0"
+}

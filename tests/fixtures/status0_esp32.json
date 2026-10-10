@@ -1,0 +1,167 @@
+{
+  "Status": {
+    "Module": 0,
+    "DeviceName": "Apri cancello",
+    "FriendlyName": [
+      "Apri cancello"
+    ],
+    "Topic": "tasmota_000228",
+    "ButtonTopic": "0",
+    "Power": "0",
+    "PowerLock": "0",
+    "PowerOnState": 3,
+    "LedState": 1,
+    "LedMask": "FFFF",
+    "SaveData": 1,
+    "SaveState": 1,
+    "SwitchTopic": "0",
+    "SwitchMode": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "ButtonRetain": 0,
+    "SwitchRetain": 0,
+    "SensorRetain": 0,
+    "PowerRetain": 0,
+    "InfoRetain": 0,
+    "StateRetain": 0,
+    "StatusRetain": 0
+  },
+  "StatusPRM": {
+    "Baudrate": 115200,
+    "SerialConfig": "8N1",
+    "GroupTopic": "tasmotas",
+    "OtaUrl": "http://ota.tasmota.com/tasmota32/release/tasmota32.bin",
+    "RestartReason": "Vbat power on reset",
+    "Uptime": "0T05:40:10",
+    "StartupUTC": "2026-10-09T14:43:50",
+    "Sleep": 50,
+    "CfgHolder": 4617,
+    "BootCount": 12,
+    "BCResetTime": "2024-11-02T10:21:37",
+    "SaveCount": 233
+  },
+  "StatusFWR": {
+    "Version": "15.0.1(release-tasmota32)",
+    "BuildDateTime": "2025-06-02T10:12:30",
+    "Core": "3_1_3",
+    "SDK": "5.3.3.250501",
+    "CpuFrequency": 240,
+    "Hardware": "ESP32-D0WD-V3 v3.1",
+    "CR": "404/1167"
+  },
+  "StatusLOG": {
+    "SerialLog": 2,
+    "WebLog": 2,
+    "MqttLog": 0,
+    "SysLog": 0,
+    "LogHost": "",
+    "LogPort": 514,
+    "SSId": [
+      "HomeWiFi",
+      ""
+    ],
+    "TelePeriod": 300,
+    "Resolution": "558180C0",
+    "SetOption": [
+      "00008009",
+      "2805C80001000600003C5A0A192800000000",
+      "00000080",
+      "00006000",
+      "00004000",
+      "00000000"
+    ]
+  },
+  "StatusMEM": {
+    "ProgramSize": 2120,
+    "Free": 1088,
+    "Heap": 148,
+    "StackLowMark": 3,
+    "PsrMax": 0,
+    "PsrFree": 0,
+    "ProgramFlashSize": 4096,
+    "FlashSize": 4096,
+    "FlashChipId": "16405E",
+    "FlashFrequency": 40,
+    "FlashMode": "DIO",
+    "Features": [
+      "0809",
+      "9F9AD7DF",
+      "0015A001",
+      "B7F7BFCF",
+      "05DA9BC0",
+      "E467BCC7",
+      "0B000044",
+      "04000000",
+      "00000000",
+      "00000000"
+    ],
+    "Drivers": "1,2,3,4,5,6,7,8,9,10,12,16,18,19,20,21,22,24,26,27,29,30,35,37,45,52,62",
+    "Sensors": "1,2,3,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,21,22,26,31,34,37,39,40,42,43,45,51,52,55,56,58,59,64,66,67,74,85,92,95,98,103,105,109,127",
+    "I2CDriver": "7,8,9,10,11,12,13,14,15,17,18,20,24,29,31,36,41,42,44,46,48,58,62,65,69,76,77,82,89"
+  },
+  "StatusNET": {
+    "Hostname": "apri-cancello",
+    "IPAddress": "192.168.1.228",
+    "Gateway": "192.168.1.1",
+    "Subnetmask": "255.255.255.0",
+    "DNSServer1": "192.168.1.9",
+    "DNSServer2": "0.0.0.0",
+    "Mac": "E8:68:E7:00:02:28",
+    "Webserver": 2,
+    "HTTP_API": 1,
+    "WifiConfig": 4,
+    "WifiPower": 17.0
+  },
+  "StatusMQT": {
+    "MqttHost": "192.168.1.3",
+    "MqttPort": 1883,
+    "MqttClientMask": "DVES_%06X",
+    "MqttClient": "DVES_000248",
+    "MqttUser": "mqtt",
+    "MqttCount": 3,
+    "MAX_PACKET_SIZE": 1200,
+    "KEEPALIVE": 30,
+    "SOCKET_TIMEOUT": 4
+  },
+  "StatusTIM": {
+    "UTC": "2026-10-09T20:24:00Z",
+    "Local": "2026-10-09T22:24:00",
+    "StartDST": "2026-03-29T02:00:00",
+    "EndDST": "2026-10-25T03:00:00",
+    "Timezone": 99,
+    "Sunrise": "07:22",
+    "Sunset": "18:51"
+  },
+  "StatusSNS": {
+    "Time": "2026-10-09T22:24:00",
+    "Switch1": "OFF"
+  },
+  "StatusSTS": {
+    "Time": "2026-10-09T22:24:00",
+    "Uptime": "0T05:40:10",
+    "UptimeSec": 20410,
+    "Heap": 148,
+    "SleepMode": "Dynamic",
+    "Sleep": 50,
+    "LoadAvg": 9,
+    "MqttCount": 3,
+    "Wifi": {
+      "AP": 1,
+      "SSId": "HomeWiFi",
+      "BSSId": "3C:A6:2F:00:00:06",
+      "Channel": 1,
+      "Mode": "HT40",
+      "RSSI": 64,
+      "Signal": -68,
+      "LinkCount": 1,
+      "Downtime": "0T00:00:04"
+    }
+  }
+}
