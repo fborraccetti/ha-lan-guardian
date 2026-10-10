@@ -31,6 +31,7 @@ CATEGORIES = [
     "media",
     "camera",
     "tasmota",
+    "shelly",
     "iot",
     "other",
 ]

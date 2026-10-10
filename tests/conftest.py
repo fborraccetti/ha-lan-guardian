@@ -20,6 +20,7 @@ from custom_components.lan_guardian.const import (
 )
 from custom_components.lan_guardian.net.dns import DnsCheck
 from custom_components.lan_guardian.net.icmp import PingResult, ProbeMode
+from custom_components.lan_guardian.shelly.probe import ShellyProbe
 from custom_components.lan_guardian.tasmota.client import TasmotaAuthError, TasmotaConnectionError
 from custom_components.lan_guardian.tasmota.firmware import FirmwareError, Release
 from custom_components.lan_guardian.tasmota.probe import ProbeResult, WebAuth
@@ -128,6 +129,7 @@ class FakeNetwork:
         self.dns_down: set[str] = set()
         self.adblock_addresses: tuple[str, ...] = ("0.0.0.0",)
         self.tasmota: dict[str, WebAuth] = {"192.168.1.248": WebAuth.OPEN}
+        self.shelly: dict[str, ShellyProbe] = {}
         # HTTP API of the Tasmota devices: Status 0 answers, WebPasswords, config dumps.
         self.tasmota_status: dict[str, dict[str, Any]] = {
             "192.168.1.248": load_fixture("status0_esp8266.json")
@@ -228,6 +230,9 @@ def fake_network() -> Generator[FakeNetwork]:
             auth = WebAuth.PROTECTED
         return ProbeResult(ip=ip, auth=auth) if auth else None
 
+    async def probe_shelly(session: object, ip: str, **kwargs: object) -> ShellyProbe | None:
+        return net.shelly.get(ip)
+
     async def latest_release(session: object) -> Release:
         net.release_checks += 1
         if net.release is None:
@@ -249,6 +254,7 @@ def fake_network() -> Generator[FakeNetwork]:
         patch(f"{health}.async_ping_target", side_effect=ping_target),
         patch(f"{health}.async_resolve", side_effect=resolve),
         patch(f"{security}.async_probe_tasmota", side_effect=probe),
+        patch(f"{security}.async_probe_shelly", side_effect=probe_shelly),
         patch(f"{tasmota}.TasmotaClient", client_cls),
         patch(f"{tasmota}.BACKUP_RETRY_DELAY", 0),
         patch(f"{tasmota}.async_fetch_latest_release", side_effect=latest_release),

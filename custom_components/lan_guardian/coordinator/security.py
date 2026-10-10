@@ -1,4 +1,4 @@
-"""Security coordinator: find Tasmota devices on the LAN and flag those without WebPassword."""
+"""Security coordinator: find Tasmota and Shelly devices, flag those without a password."""
 
 from __future__ import annotations
 
@@ -13,9 +13,15 @@ from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
-from ..const import CONF_SECURITY_INTERVAL_HOURS, CONF_TASMOTA_WARN_NO_PASSWORD, DOMAIN
-from ..issues import ISSUE_TASMOTA_NO_PASSWORD, sync_issues
-from ..notifier import EVENT_TASMOTA_NO_PASSWORD, Notifier
+from ..const import (
+    CONF_SECURITY_INTERVAL_HOURS,
+    CONF_SHELLY_WARN_NO_PASSWORD,
+    CONF_TASMOTA_WARN_NO_PASSWORD,
+    DOMAIN,
+)
+from ..issues import ISSUE_SHELLY_NO_PASSWORD, ISSUE_TASMOTA_NO_PASSWORD, sync_issues
+from ..notifier import EVENT_SHELLY_NO_PASSWORD, EVENT_TASMOTA_NO_PASSWORD, Notifier
+from ..shelly.probe import ShellyProbe, async_probe_shelly
 from ..tasmota.probe import ProbeResult, WebAuth, async_probe_tasmota
 
 if TYPE_CHECKING:
@@ -26,19 +32,26 @@ if TYPE_CHECKING:
 _LOGGER = logging.getLogger(__name__)
 
 TASMOTA_CATEGORY = "tasmota"
+SHELLY_CATEGORY = "shelly"
 DEFAULT_CATEGORY = "other"
 
 
 @dataclass(frozen=True, slots=True)
 class SecurityResult:
-    """Tasmota devices found, keyed by MAC."""
+    """Tasmota and Shelly devices found, keyed by MAC."""
 
     tasmota: dict[str, ProbeResult] = field(default_factory=dict)
+    shelly: dict[str, ShellyProbe] = field(default_factory=dict)
 
     @property
     def open_macs(self) -> list[str]:
         """Tasmota devices without WebPassword."""
         return sorted(mac for mac, res in self.tasmota.items() if res.auth is WebAuth.OPEN)
+
+    @property
+    def open_shelly_macs(self) -> list[str]:
+        """Shelly devices without authentication."""
+        return sorted(mac for mac, res in self.shelly.items() if res.auth is WebAuth.OPEN)
 
 
 class SecurityCoordinator(DataUpdateCoordinator[SecurityResult]):
@@ -67,6 +80,7 @@ class SecurityCoordinator(DataUpdateCoordinator[SecurityResult]):
         self.notifier = notifier
         self._semaphore = semaphore
         self.warn_no_password = bool(options[CONF_TASMOTA_WARN_NO_PASSWORD])
+        self.warn_shelly_no_password = bool(options[CONF_SHELLY_WARN_NO_PASSWORD])
 
     async def _async_update_data(self) -> SecurityResult:
         session = async_get_clientsession(self.hass)
@@ -76,30 +90,47 @@ class SecurityCoordinator(DataUpdateCoordinator[SecurityResult]):
             if dev.online and dev.ip and dev.ip != self.scan.gateway
         }
 
-        async def probe(mac: str, ip: str) -> tuple[str, ProbeResult | None]:
+        async def probe(mac: str, ip: str) -> tuple[str, ProbeResult | ShellyProbe | None]:
             async with self._semaphore:
-                return mac, await async_probe_tasmota(session, ip)
+                if tasmota := await async_probe_tasmota(session, ip):
+                    return mac, tasmota
+                return mac, await async_probe_shelly(session, ip)
 
-        found = {
-            mac: res
-            for mac, res in await asyncio.gather(*(probe(m, ip) for m, ip in candidates.items()))
-            if res is not None
-        }
+        answers = await asyncio.gather(*(probe(m, ip) for m, ip in candidates.items()))
+        found_tasmota = {mac: res for mac, res in answers if isinstance(res, ProbeResult)}
+        found_shelly = {mac: res for mac, res in answers if isinstance(res, ShellyProbe)}
         # Keep devices seen before but offline now: still a risk when they come back.
-        previous = self.data.tasmota if self.data else {}
-        merged = {
-            **{mac: res for mac, res in previous.items() if mac in self.scan.inventory.devices},
-            **found,
-        }
-        result = SecurityResult(tasmota=merged)
-
+        # A device found now under the other kind (reflashed) leaves the old list.
         inventory = self.scan.inventory
-        for mac in found:
-            if (dev := inventory.devices.get(mac)) and dev.category == DEFAULT_CATEGORY:
-                dev.category = TASMOTA_CATEGORY
+        found = found_tasmota.keys() | found_shelly.keys()
+        previous = self.data or SecurityResult()
+        result = SecurityResult(
+            tasmota={
+                **{
+                    mac: res
+                    for mac, res in previous.tasmota.items()
+                    if mac in inventory.devices and mac not in found
+                },
+                **found_tasmota,
+            },
+            shelly={
+                **{
+                    mac: res
+                    for mac, res in previous.shelly.items()
+                    if mac in inventory.devices and mac not in found
+                },
+                **found_shelly,
+            },
+        )
+
+        for macs, category in ((found_tasmota, TASMOTA_CATEGORY), (found_shelly, SHELLY_CATEGORY)):
+            for mac in macs:
+                if (dev := inventory.devices.get(mac)) and dev.category == DEFAULT_CATEGORY:
+                    dev.category = category
         inventory.async_schedule_save()
 
         await self._async_alerts(result)
+        await self._async_shelly_alerts(result)
         return result
 
     async def _async_alerts(self, result: SecurityResult) -> None:
@@ -126,4 +157,27 @@ class SecurityCoordinator(DataUpdateCoordinator[SecurityResult]):
             severity=ir.IssueSeverity.WARNING,
             is_fixable=True,
             learn_more_url="https://tasmota.github.io/docs/Commands/#management",
+        )
+
+    async def _async_shelly_alerts(self, result: SecurityResult) -> None:
+        open_macs = result.open_shelly_macs if self.warn_shelly_no_password else []
+        inventory = self.scan.inventory
+        labels = [
+            f"{dev.display_name} ({result.shelly[mac].ip})"
+            if (dev := inventory.devices.get(mac))
+            else result.shelly[mac].ip
+            for mac in open_macs
+        ]
+        placeholders = {"count": str(len(open_macs)), "devices": ", ".join(labels)}
+        if open_macs:
+            await self.notifier.async_notify(
+                EVENT_SHELLY_NO_PASSWORD, ",".join(open_macs), placeholders
+            )
+        sync_issues(
+            self.hass,
+            ISSUE_SHELLY_NO_PASSWORD,
+            {ISSUE_SHELLY_NO_PASSWORD: placeholders} if open_macs else {},
+            severity=ir.IssueSeverity.WARNING,
+            is_fixable=False,
+            learn_more_url="https://shelly-api-docs.shelly.cloud/gen2/General/Authentication",
         )

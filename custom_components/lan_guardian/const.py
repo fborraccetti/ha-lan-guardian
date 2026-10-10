@@ -24,6 +24,7 @@ CONF_DNS_SERVERS: Final = "dns_servers"
 CONF_DNS_TEST_DOMAIN: Final = "dns_test_domain"
 CONF_ADBLOCK_TEST_DOMAIN: Final = "adblock_test_domain"
 CONF_SECURITY_INTERVAL_HOURS: Final = "security_interval_hours"
+CONF_SHELLY_WARN_NO_PASSWORD: Final = "shelly_warn_no_password"
 
 # Options: Tasmota.
 CONF_TASMOTA_PASSWORD: Final = "tasmota_password"
@@ -62,6 +63,7 @@ DEFAULT_OPTIONS: Final[dict[str, object]] = {
     CONF_DNS_TEST_DOMAIN: "www.google.com",
     CONF_ADBLOCK_TEST_DOMAIN: "doubleclick.net",
     CONF_SECURITY_INTERVAL_HOURS: 6,
+    CONF_SHELLY_WARN_NO_PASSWORD: True,
     CONF_TASMOTA_PASSWORD: "",
     CONF_TASMOTA_CONCURRENCY: 3,
     CONF_TASMOTA_SIGNAL_DROP: 20,

@@ -40,6 +40,7 @@ EVENT_TASMOTA_NO_PASSWORD: Final = "tasmota_no_password"
 EVENT_TASMOTA_SIGNAL_DROP: Final = "tasmota_signal_drop"
 EVENT_TASMOTA_RESTARTS: Final = "tasmota_frequent_restarts"
 EVENT_TASMOTA_AUTH: Final = "tasmota_auth_failed"
+EVENT_SHELLY_NO_PASSWORD: Final = "shelly_no_password"
 EVENT_BACKUP_FAILED: Final = "backup_failed"
 EVENT_PASSWORD_APPLIED: Final = "tasmota_password_applied"
 EVENT_FIRMWARE_UPDATED: Final = "tasmota_firmware_updated"
@@ -116,6 +117,10 @@ MESSAGES: Final[dict[str, dict[str, tuple[str, str]]]] = {
         EVENT_TASMOTA_NO_PASSWORD: (
             "LAN Guardian: Tasmota without password",
             "{count} Tasmota devices have no WebPassword: {devices}.",
+        ),
+        EVENT_SHELLY_NO_PASSWORD: (
+            "LAN Guardian: Shelly without password",
+            "{count} Shelly devices have no authentication: {devices}.",
         ),
         EVENT_TASMOTA_SIGNAL_DROP: (
             "LAN Guardian: Wi-Fi signal dropped",
@@ -208,6 +213,10 @@ MESSAGES: Final[dict[str, dict[str, tuple[str, str]]]] = {
         EVENT_TASMOTA_NO_PASSWORD: (
             "LAN Guardian: Tasmota senza password",
             "{count} dispositivi Tasmota non hanno WebPassword: {devices}.",
+        ),
+        EVENT_SHELLY_NO_PASSWORD: (
+            "LAN Guardian: Shelly senza password",
+            "{count} dispositivi Shelly non hanno l'autenticazione: {devices}.",
         ),
         EVENT_TASMOTA_SIGNAL_DROP: (
             "LAN Guardian: segnale Wi-Fi calato",

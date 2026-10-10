@@ -57,3 +57,14 @@ Riferimento: Home Assistant core tag `2026.9.4`, Tasmota branch `development`.
   password; max 32 caratteri; utente sempre `admin`.
 - **Test "senza password"**: `/cm?cmnd=Status` senza credenziali → 200 = nessuna password,
   401 = protetto (più robusto di `/`).
+
+## Shelly
+
+- **`GET /shelly`**: mai protetto, su tutte le generazioni.
+  - Gen1: `{"type":"SHSW-1","mac":...,"auth":bool,"fw":...}`.
+  - Gen2+: `{"id":...,"mac":...,"model":...,"gen":2|3|4,"ver":...,"app":...,"auth_en":bool,"auth_domain":...}`.
+- **Verifica reale**: Gen1 `GET /settings` (HTTP Basic), Gen2+ `GET /rpc/Sys.GetConfig` (Digest
+  SHA-256, utente `admin`, realm = id del dispositivo) → 200 = aperto, 401 = protetto.
+- Password: Gen1 `/settings/login?enabled=1&username=&password=`; Gen2+ `Shelly.SetAuth` con
+  `ha1 = sha256("admin:<id>:<password>")`. Non usate: LAN Guardian solo segnala, perché
+  impostare la password richiede di aggiornare le credenziali nell'integrazione Shelly di HA.

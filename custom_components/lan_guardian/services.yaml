@@ -23,6 +23,7 @@ update_device:
             - media
             - camera
             - tasmota
+            - shelly
             - iot
             - other
     critical:

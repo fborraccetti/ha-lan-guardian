@@ -1,4 +1,4 @@
-"""LAN Guardian: watch the home network and manage Tasmota devices."""
+"""LAN Guardian: watch the home network, manage Tasmota devices, check Shelly devices."""
 
 from __future__ import annotations
 

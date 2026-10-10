@@ -4,8 +4,9 @@
 [![Tests](https://github.com/fborraccetti/ha-lan-guardian/actions/workflows/tests.yml/badge.svg)](https://github.com/fborraccetti/ha-lan-guardian/actions/workflows/tests.yml)
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz/)
 
-A Home Assistant custom integration that watches your home network and manages your
-[Tasmota](https://tasmota.github.io/) devices. Everything runs locally: no cloud, no add-on,
+A Home Assistant custom integration that watches your home network, manages your
+[Tasmota](https://tasmota.github.io/) devices and checks that your [Shelly](https://www.shelly.com/)
+devices are password protected. Everything runs locally: no cloud, no add-on,
 no agent on other machines.
 
 - **Device inventory**: every host on the LAN, with vendor, hostname, first/last seen.
@@ -13,6 +14,8 @@ no agent on other machines.
 - **Network health**: gateway and Internet packet loss and latency, DNS servers, ad-blocker check.
 - **Tasmota manager**: Wi-Fi signal, restarts, configuration backups, firmware updates and
   WebPassword management.
+- **Shelly security check**: finds Shelly devices (Gen1 and Gen2+) whose local API is open to
+  anyone on the network.
 
 UI and notifications are available in English and Italian.
 
@@ -64,6 +67,20 @@ UI and notifications are available in English and Italian.
   `ota.tasmota.com` (backup first, if you ask for it).
 - **WebPassword**: flags devices that accept commands without a password, sets a global (or
   per-device) password on them, and can generate a strong one for you.
+
+### Shelly
+
+- Finds Shelly devices on the LAN during the security check (Gen1, Gen2, Gen3 and Gen4) and sets
+  their category to *Shelly*.
+- Identifies each device with `/shelly` (never protected), then **verifies** the protection by
+  calling an endpoint that requires a password when one is set (`/settings` on Gen1,
+  `/rpc/Sys.GetConfig` on Gen2+). A device is reported only if that call really succeeds
+  without credentials.
+- A sensor counts the unprotected Shelly devices; a security issue and a notification list
+  them. Open devices that go offline stay on the list until they are seen protected.
+- The check is read-only: LAN Guardian never changes a Shelly. Set the password in the device's
+  web UI (*Settings → Authentication*) or in the Shelly app, then enter it in Home Assistant's
+  Shelly integration when it asks.
 
 ## Requirements
 
@@ -142,7 +159,8 @@ are grouped in a menu; each section is saved on its own and the integration relo
 | DNS servers | *(empty)* | The first is the primary DNS. If empty, the gateway is checked. |
 | Domain to resolve | `www.google.com` | Used to time the DNS servers. |
 | Ad domain that must be blocked | `doubleclick.net` | Leave empty if you have no ad-blocking DNS. |
-| Tasmota security check every | 6 h | Looks for Tasmota devices without WebPassword. |
+| Security check every | 6 h | Looks for Tasmota and Shelly devices without a password. |
+| Warn about Shelly devices without password | on | Raises a security issue for open Shelly devices. |
 
 ### Tasmota
 
@@ -181,14 +199,14 @@ Repair issues are always created. In addition you can choose:
 | Gateway / Internet packet loss, latency, max latency | sensor |
 | DNS resolution time *(per server)* | sensor |
 | DNS *(per server)*, Internet, Ad blocking active | binary sensor |
-| Tasmota without password | sensor |
+| Tasmota without password, Shelly without password | sensor |
 
 **Each network device**
 
 | Entity | Type |
 | --- | --- |
 | IP address, Hostname, Vendor, First seen, Last seen | sensor |
-| Category (network, server, computer, phone, media, camera, Tasmota, IoT, other) | select |
+| Category (network, server, computer, phone, media, camera, Tasmota, Shelly, IoT, other) | select |
 | Status (known, ignored, new) | select |
 | Critical | switch |
 | Forget device | button |
@@ -240,6 +258,7 @@ category, or set the WebPassword).
 - Tasmota Wi-Fi signal dropped
 - Tasmota restarting often
 - Tasmota password rejected
+- Shelly devices without password
 
 ## Privacy and security
 

@@ -37,6 +37,7 @@ from .const import (
     CONF_RANDOM_MAC_MODE,
     CONF_SCAN_INTERVAL,
     CONF_SECURITY_INTERVAL_HOURS,
+    CONF_SHELLY_WARN_NO_PASSWORD,
     CONF_SUBNET,
     CONF_TASMOTA_CONCURRENCY,
     CONF_TASMOTA_DEVICE_PASSWORDS,
@@ -253,6 +254,9 @@ class LanGuardianOptionsFlow(OptionsFlowWithReload):
                 vol.Required(
                     CONF_SECURITY_INTERVAL_HOURS, default=opts[CONF_SECURITY_INTERVAL_HOURS]
                 ): _number(1, 168, "h"),
+                vol.Required(
+                    CONF_SHELLY_WARN_NO_PASSWORD, default=opts[CONF_SHELLY_WARN_NO_PASSWORD]
+                ): bool,
             }
         )
         return self.async_show_form(step_id="health", data_schema=schema, errors=errors)

@@ -48,6 +48,7 @@ async def async_setup_entry(
         DevicesOnlineSensor(data.scan, entry),
         UnknownDevicesSensor(data.scan, entry),
         TasmotaOpenSensor(data.security, entry),
+        ShellyOpenSensor(data.security, entry),
     ]
     entities += [HealthSensor(data.health, entry, desc) for desc in HEALTH_SENSORS]
     entities += [DnsTimeSensor(data.health, entry, server) for server in data.health.dns_servers]
@@ -132,6 +133,46 @@ class UnknownDevicesSensor(_ScanSensor):
                 {"mac": d.mac, "ip": d.ip, "vendor": d.vendor, "hostname": d.hostname}
                 for d in self.coordinator.inventory.by_status(STATUS_NEW)
             ]
+        }
+
+
+class ShellyOpenSensor(CoordinatorEntity[SecurityCoordinator], SensorEntity):
+    """Shelly devices reachable without authentication."""
+
+    _attr_has_entity_name = True
+    _attr_translation_key = "shelly_without_password"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(self, coordinator: SecurityCoordinator, entry: LanGuardianConfigEntry) -> None:
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{entry.entry_id}_shelly_without_password"
+        self._attr_device_info = service_device_info(entry)
+
+    @property
+    def native_value(self) -> int | None:
+        """Number of unprotected Shelly devices."""
+        data = self.coordinator.data
+        return len(data.open_shelly_macs) if data else None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Which devices, and how many Shelly were found in total."""
+        data = self.coordinator.data
+        if data is None:
+            return {}
+        inventory = self.coordinator.scan.inventory
+        return {
+            "shelly_found": len(data.shelly),
+            "devices": [
+                {
+                    "name": dev.display_name if (dev := inventory.devices.get(mac)) else mac,
+                    "ip": data.shelly[mac].ip,
+                    "generation": data.shelly[mac].gen,
+                    "model": data.shelly[mac].model,
+                }
+                for mac in data.open_shelly_macs
+            ],
         }
 
 

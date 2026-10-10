@@ -57,12 +57,14 @@
           "dns_servers": "DNS servers",
           "dns_test_domain": "Domain to resolve",
           "adblock_test_domain": "Ad domain that must be blocked",
-          "security_interval_hours": "Tasmota security check every"
+          "security_interval_hours": "Tasmota security check every",
+          "shelly_warn_no_password": "Warn about Shelly devices without password"
         },
         "data_description": {
           "dns_servers": "The first one is the primary DNS: an issue is raised if it stops answering. If empty, the gateway is checked.",
           "adblock_test_domain": "Leave empty to skip the Pi-hole blocking check.",
-          "security_interval_hours": "Looks for Tasmota devices over HTTP and reports those without WebPassword."
+          "security_interval_hours": "Looks for Tasmota and Shelly devices over HTTP and reports those without a password.",
+          "shelly_warn_no_password": "Raises a security issue listing the Shelly devices whose local API accepts commands without authentication."
         }
       },
       "tasmota": {
@@ -140,6 +142,7 @@
         "media": "Media / speaker",
         "camera": "Camera",
         "tasmota": "Tasmota",
+        "shelly": "Shelly",
         "iot": "Other IoT",
         "other": "Other"
       }
@@ -183,6 +186,9 @@
       },
       "tasmota_without_password": {
         "name": "Tasmota without password"
+      },
+      "shelly_without_password": {
+        "name": "Shelly without password"
       },
       "tasmota_wifi_signal": {
         "name": "Wi-Fi signal"
@@ -256,6 +262,7 @@
           "media": "Media / speaker",
           "camera": "Camera",
           "tasmota": "Tasmota",
+          "shelly": "Shelly",
           "iot": "Other IoT",
           "other": "Other"
         }
@@ -350,6 +357,10 @@
           "no_password": "First store a WebPassword in Options → Tasmota (type or generate one), then come back here."
         }
       }
+    },
+    "shelly_no_password": {
+      "title": "{count} Shelly devices without password",
+      "description": "These Shelly devices accept any local command from anyone on the network, including switching, reset and firmware update: {devices}.\n\nSet a password in each device's web UI (Settings → Authentication) or in the Shelly app. Then update the credentials in Home Assistant's Shelly integration, which will ask for them. The issue closes on the next security check."
     },
     "tasmota_signal_drop": {
       "title": "Tasmota Wi-Fi signal dropped",

@@ -18,6 +18,7 @@ ISSUE_TASMOTA_NO_PASSWORD = "tasmota_no_password"
 ISSUE_TASMOTA_SIGNAL_DROP = "tasmota_signal_drop"
 ISSUE_TASMOTA_RESTARTS = "tasmota_frequent_restarts"
 ISSUE_TASMOTA_AUTH = "tasmota_auth_failed"
+ISSUE_SHELLY_NO_PASSWORD = "shelly_no_password"
 
 
 def mac_key(mac: str) -> str:
