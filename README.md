@@ -5,7 +5,7 @@
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz/)
 
 A Home Assistant custom integration that watches your home network, manages your
-[Tasmota](https://tasmota.github.io/) devices and checks that your [Shelly](https://www.shelly.com/)
+[Tasmota](https://tasmota.github.io/) devices and makes sure your [Shelly](https://www.shelly.com/)
 devices are password protected. Everything runs locally: no cloud, no add-on,
 no agent on other machines.
 
@@ -15,7 +15,7 @@ no agent on other machines.
 - **Tasmota manager**: Wi-Fi signal, restarts, configuration backups, firmware updates and
   WebPassword management.
 - **Shelly security check**: finds Shelly devices (Gen1 and Gen2+) whose local API is open to
-  anyone on the network.
+  anyone on the network, and sets the same global password on them.
 
 UI and notifications are available in English and Italian.
 
@@ -78,9 +78,16 @@ UI and notifications are available in English and Italian.
   without credentials.
 - A sensor counts the unprotected Shelly devices; a security issue and a notification list
   them. Open devices that go offline stay on the list until they are seen protected.
-- The check is read-only: LAN Guardian never changes a Shelly. Set the password in the device's
-  web UI (*Settings → Authentication*) or in the Shelly app, then enter it in Home Assistant's
-  Shelly integration when it asks.
+- **Password**: sets the global password stored in the Tasmota options (user `admin`) on the
+  open devices, from the security issue, the *Apply password* button on the device page or the
+  `lan_guardian.apply_shelly_password` action. Gen1 receives it through `/settings/login`, Gen2+
+  only receives its hash through `Shelly.SetAuth`. Each device is checked afterwards: anonymous
+  requests must be refused and the password accepted. Devices already protected are skipped.
+- After that, **Home Assistant's Shelly integration loses access** to those devices until you
+  enter the new credentials: it raises a re-authentication request under *Settings → Devices &
+  services*. Other local clients (scripts, other hubs) need the password too; the Shelly app and
+  cloud keep working.
+- To remove the password, use the device's web UI (*Settings → Authentication*) or the Shelly app.
 
 ## Requirements
 
@@ -166,7 +173,7 @@ are grouped in a menu; each section is saved on its own and the integration relo
 
 | Option | Default | Description |
 | --- | --- | --- |
-| Global WebPassword | *(empty)* | Used to talk to protected devices (user `admin`) and set on unprotected ones. 8–32 characters, no spaces or `;`. Never logged nor shown again. |
+| Global WebPassword | *(empty)* | Used to talk to protected devices (user `admin`) and set on unprotected Tasmota and Shelly devices. 8–32 characters, no spaces or `;`. Never logged nor shown again. |
 | Generate a random password | off | Creates a strong password and shows it **once**: copy it before confirming. |
 | Parallel requests to Tasmota | 3 | |
 | Signal drop alarm | 20 % | Percentage points lost against the 24-hour average that raise an alert. |
@@ -219,6 +226,12 @@ Repair issues are always created. In addition you can choose:
 | Back up now, Apply WebPassword | button |
 | Firmware | update |
 
+**Each Shelly device** (in addition to the above)
+
+| Entity | Type |
+| --- | --- |
+| Apply password | button |
+
 ## Actions
 
 | Action | Fields | Description |
@@ -228,6 +241,7 @@ Repair issues are always created. In addition you can choose:
 | `lan_guardian.forget_device` | `mac` | Removes a device; if it comes back it is new again. |
 | `lan_guardian.backup_tasmota` | `device_id` *(optional)* | Backs up the chosen Tasmota devices (all if none). |
 | `lan_guardian.apply_tasmota_password` | `device_id` *(optional)* | Sets the stored WebPassword on the chosen devices (all if none). The password is never an action parameter. |
+| `lan_guardian.apply_shelly_password` | `device_id` *(optional)* | Sets the same stored password on the chosen Shelly devices (all if none). |
 
 Example: name a device and mark it as known.
 
@@ -245,7 +259,7 @@ data:
 
 Alerts appear in **Settings → System → Repairs** and, if enabled, as notifications. Some can be
 fixed directly from the repair dialog (for example: approve a new device with a name and a
-category, or set the WebPassword).
+category, or set the password on Tasmota and Shelly devices).
 
 - New device on the network
 - Critical device offline
@@ -267,8 +281,9 @@ category, or set the WebPassword).
   `ota.tasmota.com`.
 - Tasmota passwords are stored in the config entry options (like any other integration's
   credentials), are never written to logs and never passed as action data.
-- Tasmota only supports plain HTTP with Basic authentication: anyone on your LAN can sniff it.
-  Keep IoT devices on a trusted network or VLAN.
+- Tasmota and Shelly Gen1 only support plain HTTP with Basic authentication: anyone on your LAN
+  can sniff it. Shelly Gen2+ uses Digest authentication, which never sends the password. Keep IoT
+  devices on a trusted network or VLAN.
 
 ## Troubleshooting
 

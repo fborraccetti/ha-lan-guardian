@@ -1,1 +1,1 @@
-"""Shelly devices: detection and authentication check."""
+"""Shelly devices: detection, authentication check and password."""

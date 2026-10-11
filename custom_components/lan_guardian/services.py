@@ -27,6 +27,7 @@ SERVICE_UPDATE_DEVICE = "update_device"
 SERVICE_FORGET_DEVICE = "forget_device"
 SERVICE_BACKUP_TASMOTA = "backup_tasmota"
 SERVICE_APPLY_TASMOTA_PASSWORD = "apply_tasmota_password"
+SERVICE_APPLY_SHELLY_PASSWORD = "apply_shelly_password"
 
 ATTR_MAC = "mac"
 
@@ -188,12 +189,37 @@ def async_setup_services(hass: HomeAssistant) -> None:
                 translation_placeholders={"devices": ", ".join(result.failed)},
             )
 
+    async def apply_shelly_password(call: ServiceCall) -> None:
+        # Same password and same rule as for Tasmota: never a service field.
+        coordinator = loaded_entry(hass).runtime_data.security
+        macs = macs_for_devices(hass, call.data[ATTR_DEVICE_ID]) or None
+        known = coordinator.data.shelly if coordinator.data else {}
+        if macs is not None and (unknown := [m for m in macs if m not in known]):
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="shelly_unknown",
+                translation_placeholders={"mac": ", ".join(unknown)},
+            )
+        result = await coordinator.async_apply_shelly_password(macs)
+        if result.failed:
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="password_failed",
+                translation_placeholders={"devices": ", ".join(result.failed)},
+            )
+
     hass.services.async_register(DOMAIN, SERVICE_SCAN_NOW, scan_now)
     hass.services.async_register(
         DOMAIN,
         SERVICE_APPLY_TASMOTA_PASSWORD,
         apply_tasmota_password,
         schema=BACKUP_TASMOTA_SCHEMA,  # same shape: optional device_id list
+    )
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_APPLY_SHELLY_PASSWORD,
+        apply_shelly_password,
+        schema=BACKUP_TASMOTA_SCHEMA,
     )
     hass.services.async_register(
         DOMAIN, SERVICE_BACKUP_TASMOTA, backup_tasmota, schema=BACKUP_TASMOTA_SCHEMA

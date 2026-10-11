@@ -22,6 +22,12 @@ class ShellyProbe:
     gen: int
     model: str | None = None
     firmware: str | None = None
+    device_id: str | None = None  # Gen2+ "id": the realm of its Digest authentication
+
+
+def guarded_url(ip: str, gen: int) -> str:
+    """An endpoint that answers 401 when a password is set and 200 otherwise."""
+    return f"http://{ip}/settings" if gen == 1 else f"http://{ip}/rpc/Sys.GetConfig"
 
 
 async def _async_get(
@@ -62,18 +68,16 @@ async def async_probe_shelly(
 
     if isinstance(gen := info.get("gen"), int) and gen >= 2 and "auth_en" in info:
         claimed = bool(info["auth_en"])
-        guarded = f"http://{ip}/rpc/Sys.GetConfig"
         model, firmware = info.get("model") or info.get("app"), info.get("ver")
     elif "type" in info and "auth" in info:
         gen, claimed = 1, bool(info["auth"])
-        guarded = f"http://{ip}/settings"
         model, firmware = info.get("type"), info.get("fw")
     else:
         return None
 
     auth = WebAuth.PROTECTED if claimed else WebAuth.OPEN
     try:
-        status, _ = await _async_get(session, guarded, timeout)
+        status, _ = await _async_get(session, guarded_url(ip, gen), timeout)
     except (aiohttp.ClientError, TimeoutError) as err:
         # The device answered /shelly a moment ago: keep what it claims.
         _LOGGER.debug("Shelly %s: auth check failed: %s", ip, err.__class__.__name__)
@@ -89,4 +93,5 @@ async def async_probe_shelly(
         gen=gen,
         model=str(model) if model else None,
         firmware=str(firmware) if firmware else None,
+        device_id=str(info["id"]) if gen >= 2 and info.get("id") else None,
     )

@@ -61,3 +61,11 @@ apply_tasmota_password:
         device:
           integration: lan_guardian
           multiple: true
+
+apply_shelly_password:
+  fields:
+    device_id:
+      selector:
+        device:
+          integration: lan_guardian
+          multiple: true

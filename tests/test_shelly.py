@@ -60,7 +60,12 @@ async def test_probe_gen2(hass: HomeAssistant, aioclient_mock: AiohttpClientMock
     aioclient_mock.get(f"{BASE}/rpc/Sys.GetConfig", json={"device": {}})
     result = await async_probe_shelly(async_get_clientsession(hass), IP)
     assert result == ShellyProbe(
-        ip=IP, auth=WebAuth.OPEN, gen=2, model="SNSW-001X16EU", firmware="1.4.4"
+        ip=IP,
+        auth=WebAuth.OPEN,
+        gen=2,
+        model="SNSW-001X16EU",
+        firmware="1.4.4",
+        device_id="shellyplus1-a0a3b3000051",
     )
 
 
@@ -150,7 +155,7 @@ async def test_shelly_without_password(
     )
     issue = ir.async_get(hass).async_get_issue(DOMAIN, "shelly_no_password")
     assert issue is not None
-    assert not issue.is_fixable
+    assert issue.is_fixable
     assert issue.translation_placeholders["count"] == "1"
     assert "shelly_no_password" in [e.data["type"] for e in events]
     inventory = config_entry.runtime_data.scan.inventory

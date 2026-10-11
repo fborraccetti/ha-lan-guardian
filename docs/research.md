@@ -65,6 +65,11 @@ Riferimento: Home Assistant core tag `2026.9.4`, Tasmota branch `development`.
   - Gen2+: `{"id":...,"mac":...,"model":...,"gen":2|3|4,"ver":...,"app":...,"auth_en":bool,"auth_domain":...}`.
 - **Verifica reale**: Gen1 `GET /settings` (HTTP Basic), Gen2+ `GET /rpc/Sys.GetConfig` (Digest
   SHA-256, utente `admin`, realm = id del dispositivo) → 200 = aperto, 401 = protetto.
-- Password: Gen1 `/settings/login?enabled=1&username=&password=`; Gen2+ `Shelly.SetAuth` con
-  `ha1 = sha256("admin:<id>:<password>")`. Non usate: LAN Guardian solo segnala, perché
-  impostare la password richiede di aggiornare le credenziali nell'integrazione Shelly di HA.
+- Password: Gen1 `GET /settings/login?enabled=1&username=admin&password=<pw>` (password in
+  query string: per questo gli errori riportano solo la classe dell'eccezione, mai l'URL); Gen2+
+  `POST /rpc` `Shelly.SetAuth` `{"user":"admin","realm":<id>,"ha1":sha256("admin:<id>:<pw>")}`.
+  Su un dispositivo aperto non servono credenziali; su uno protetto rispondono 401.
+- Verifica dopo l'impostazione: anonimo → 401, con password → 200 (Gen2+ con
+  `aiohttp.DigestAuthMiddleware`, che gestisce SHA-256).
+- Effetto collaterale: l'integrazione Shelly di HA va in errore di autenticazione e apre un
+  reauth; le sue credenziali non vengono toccate (config entry di un'altra integrazione).

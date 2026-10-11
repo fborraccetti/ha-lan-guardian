@@ -11,7 +11,12 @@ import voluptuous as vol
 
 from .const import CONF_TASMOTA_PASSWORD
 from .inventory import CATEGORIES, STATUS_IGNORED, STATUS_KNOWN
-from .issues import ISSUE_GATEWAY_MAC_CHANGED, ISSUE_NEW_DEVICE, ISSUE_TASMOTA_NO_PASSWORD
+from .issues import (
+    ISSUE_GATEWAY_MAC_CHANGED,
+    ISSUE_NEW_DEVICE,
+    ISSUE_SHELLY_NO_PASSWORD,
+    ISSUE_TASMOTA_NO_PASSWORD,
+)
 from .services import loaded_entry, sync_connectivity_entity
 
 
@@ -140,6 +145,36 @@ class TasmotaPasswordRepairFlow(RepairsFlow):
         )
 
 
+class ShellyPasswordRepairFlow(RepairsFlow):
+    """Apply the stored global password to every Shelly without one."""
+
+    async def async_step_init(self, user_input: dict[str, Any] | None = None) -> RepairsFlowResult:
+        """Check a password is stored, then ask for confirmation."""
+        options = loaded_entry(self.hass).runtime_data.options
+        if not options.get(CONF_TASMOTA_PASSWORD):
+            return self.async_abort(reason="no_password")
+        return await self.async_step_confirm()
+
+    async def async_step_confirm(
+        self, user_input: dict[str, Any] | None = None
+    ) -> RepairsFlowResult:
+        """Apply on confirmation; the outcome arrives as a notification."""
+        data = loaded_entry(self.hass).runtime_data
+        open_macs = data.security.data.open_shelly_macs if data.security.data else []
+        if user_input is not None:
+            await data.security.async_apply_shelly_password(open_macs)
+            return self.async_create_entry(data={})
+        names = [
+            dev.display_name if (dev := data.scan.inventory.devices.get(mac)) else mac
+            for mac in open_macs
+        ]
+        return self.async_show_form(
+            step_id="confirm",
+            data_schema=vol.Schema({}),
+            description_placeholders={"count": str(len(names)), "devices": ", ".join(names)},
+        )
+
+
 async def async_create_fix_flow(
     hass: HomeAssistant,
     issue_id: str,
@@ -153,4 +188,6 @@ async def async_create_fix_flow(
         return GatewayMacRepairFlow(mac)
     if issue_id == ISSUE_TASMOTA_NO_PASSWORD:
         return TasmotaPasswordRepairFlow()
+    if issue_id == ISSUE_SHELLY_NO_PASSWORD:
+        return ShellyPasswordRepairFlow()
     return ConfirmRepairFlow()

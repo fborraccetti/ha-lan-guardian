@@ -80,11 +80,11 @@
           "generate_password": "Genera una password casuale"
         },
         "data_description": {
-          "tasmota_password": "Usata per i dispositivi con WebPassword (utente admin) e applicata a quelli che non ce l'hanno. Da 8 a 32 caratteri, senza spazi né ';'. Lascia vuoto per mantenere quella attuale. Non viene mai scritta nei log.",
+          "tasmota_password": "Usata per i dispositivi con WebPassword (utente admin) e applicata a quelli che non ce l'hanno. Viene impostata anche sugli Shelly senza password, dalla loro segnalazione di sicurezza o con l'azione. Da 8 a 32 caratteri, senza spazi né ';'. Lascia vuoto per mantenere quella attuale. Non viene mai scritta nei log.",
           "tasmota_signal_drop": "Punti percentuali che il segnale deve perdere rispetto al suo livello abituale (media delle ultime 24 ore) per far scattare l'allarme.",
           "tasmota_import_mqtt": "Aggiunge i dispositivi già noti all'integrazione ufficiale tasmota, anche se non rispondono alla scansione HTTP.",
           "tasmota_warn_no_password": "Apre una segnalazione di sicurezza con l'elenco dei Tasmota che accettano comandi senza password.",
-          "generate_password": "Crea una password sicura, te la mostra una volta e la salva. Poi applicala ai dispositivi con l'azione lan_guardian.apply_tasmota_password o dalla segnalazione di sicurezza."
+          "generate_password": "Crea una password sicura, te la mostra una volta e la salva. Poi applicala ai dispositivi con le azioni lan_guardian.apply_tasmota_password e lan_guardian.apply_shelly_password o dalle segnalazioni di sicurezza."
         }
       },
       "notify": {
@@ -242,6 +242,9 @@
       "apply_password": {
         "name": "Applica WebPassword"
       },
+      "apply_shelly_password": {
+        "name": "Applica password"
+      },
       "forget": {
         "name": "Dimentica dispositivo"
       }
@@ -360,7 +363,17 @@
     },
     "shelly_no_password": {
       "title": "{count} Shelly senza password",
-      "description": "Questi Shelly accettano qualsiasi comando locale da chiunque sia in rete, compresi accensione, reset e aggiornamento del firmware: {devices}.\n\nImposta una password dall'interfaccia web di ciascun dispositivo (Settings → Authentication) o dall'app Shelly. Poi aggiorna le credenziali nell'integrazione Shelly di Home Assistant, che te le chiederà. La segnalazione si chiude al controllo di sicurezza successivo."
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Imposta la password Shelly",
+            "description": "Questi Shelly accettano qualsiasi comando locale da chiunque sia in rete, compresi accensione, reset e aggiornamento del firmware: {devices}.\n\nLa password salvata in LAN Guardian (Opzioni → Tasmota) verrà impostata su {count} dispositivi, con utente `admin`.\n\nL'integrazione Shelly di Home Assistant perde l'accesso finché non inserisci le nuove credenziali: te le chiederà in Impostazioni → Dispositivi e servizi. App e cloud Shelly continuano a funzionare. L'esito arriva come notifica."
+          }
+        },
+        "abort": {
+          "no_password": "Prima salva una password in Opzioni → Tasmota (scrivila o generala): la stessa vale per gli Shelly. Poi torna qui."
+        }
+      }
     },
     "tasmota_signal_drop": {
       "title": "Segnale Wi-Fi dei Tasmota calato",
@@ -435,6 +448,16 @@
           "description": "Tasmota su cui impostarla."
         }
       }
+    },
+    "apply_shelly_password": {
+      "name": "Imposta password Shelly",
+      "description": "Imposta la password salvata nelle opzioni di LAN Guardian (quella dei Tasmota) sugli Shelly scelti (tutti se non ne scegli nessuno), con utente admin. Salta quelli già protetti; la password non è un parametro, così non finisce nel database.",
+      "fields": {
+        "device_id": {
+          "name": "Dispositivi",
+          "description": "Shelly su cui impostarla."
+        }
+      }
     }
   },
   "exceptions": {
@@ -446,6 +469,9 @@
     },
     "tasmota_unknown": {
       "message": "Tasmota sconosciuto o senza IP: {mac}."
+    },
+    "shelly_unknown": {
+      "message": "Non è uno Shelly trovato dal controllo di sicurezza: {mac}."
     },
     "not_a_tasmota": {
       "message": "Il dispositivo {device_id} non ha un indirizzo MAC."

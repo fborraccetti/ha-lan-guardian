@@ -43,6 +43,7 @@ EVENT_TASMOTA_AUTH: Final = "tasmota_auth_failed"
 EVENT_SHELLY_NO_PASSWORD: Final = "shelly_no_password"
 EVENT_BACKUP_FAILED: Final = "backup_failed"
 EVENT_PASSWORD_APPLIED: Final = "tasmota_password_applied"
+EVENT_SHELLY_PASSWORD_APPLIED: Final = "shelly_password_applied"
 EVENT_FIRMWARE_UPDATED: Final = "tasmota_firmware_updated"
 EVENT_FIRMWARE_FAILED: Final = "tasmota_firmware_failed"
 
@@ -144,6 +145,14 @@ MESSAGES: Final[dict[str, dict[str, tuple[str, str]]]] = {
             "Protected by another password (skipped): {other}.\n"
             "Offline (try again later): {offline}.\nErrors: {failed}.",
         ),
+        EVENT_SHELLY_PASSWORD_APPLIED: (
+            "LAN Guardian: Shelly password",
+            "Password set on: {applied}.\nAlready set: {already}.\n"
+            "Protected by another password (skipped): {other}.\n"
+            "Offline (try again later): {offline}.\nErrors: {failed}.\n"
+            "Home Assistant's Shelly integration will ask for the new credentials "
+            "(user admin): open Settings → Devices & services → Shelly.",
+        ),
         EVENT_FIRMWARE_UPDATED: (
             "LAN Guardian: Tasmota updated",
             "{name} ({ip}) updated from {previous} to {version}.",
@@ -239,6 +248,14 @@ MESSAGES: Final[dict[str, dict[str, tuple[str, str]]]] = {
             "Password impostata su: {applied}.\nGià impostata: {already}.\n"
             "Protetti da un'altra password (saltati): {other}.\n"
             "Offline (riprova più tardi): {offline}.\nErrori: {failed}.",
+        ),
+        EVENT_SHELLY_PASSWORD_APPLIED: (
+            "LAN Guardian: password Shelly",
+            "Password impostata su: {applied}.\nGià impostata: {already}.\n"
+            "Protetti da un'altra password (saltati): {other}.\n"
+            "Offline (riprova più tardi): {offline}.\nErrori: {failed}.\n"
+            "L'integrazione Shelly di Home Assistant chiederà le nuove credenziali "
+            "(utente admin): apri Impostazioni → Dispositivi e servizi → Shelly.",
         ),
         EVENT_FIRMWARE_UPDATED: (
             "LAN Guardian: Tasmota aggiornato",

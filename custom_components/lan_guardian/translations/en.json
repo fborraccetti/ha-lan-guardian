@@ -80,11 +80,11 @@
           "generate_password": "Generate a random password"
         },
         "data_description": {
-          "tasmota_password": "Used for devices with a WebPassword (user admin) and applied to those without one. 8 to 32 characters, no spaces or ';'. Leave empty to keep the current one. Never logged.",
+          "tasmota_password": "Used for devices with a WebPassword (user admin) and applied to those without one. Also set on Shelly devices without a password, from their security issue or action. 8 to 32 characters, no spaces or ';'. Leave empty to keep the current one. Never logged.",
           "tasmota_signal_drop": "Percentage points the signal must lose against its usual level (average of the last 24 hours) to raise an alert.",
           "tasmota_import_mqtt": "Adds devices known to the official tasmota integration, even if the HTTP scan did not find them.",
           "tasmota_warn_no_password": "Raises a security issue listing the Tasmota devices that accept commands without a password.",
-          "generate_password": "Creates a strong password, shows it once and stores it. Then apply it to the devices with the lan_guardian.apply_tasmota_password action or from the security issue."
+          "generate_password": "Creates a strong password, shows it once and stores it. Then apply it to the devices with the lan_guardian.apply_tasmota_password and lan_guardian.apply_shelly_password actions or from the security issues."
         }
       },
       "notify": {
@@ -242,6 +242,9 @@
       "apply_password": {
         "name": "Apply WebPassword"
       },
+      "apply_shelly_password": {
+        "name": "Apply password"
+      },
       "forget": {
         "name": "Forget device"
       }
@@ -360,7 +363,17 @@
     },
     "shelly_no_password": {
       "title": "{count} Shelly devices without password",
-      "description": "These Shelly devices accept any local command from anyone on the network, including switching, reset and firmware update: {devices}.\n\nSet a password in each device's web UI (Settings → Authentication) or in the Shelly app. Then update the credentials in Home Assistant's Shelly integration, which will ask for them. The issue closes on the next security check."
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Set the Shelly password",
+            "description": "These Shelly devices accept any local command from anyone on the network, including switching, reset and firmware update: {devices}.\n\nThe password stored in LAN Guardian (Options → Tasmota) will be set on {count} devices, with user `admin`.\n\nHome Assistant's Shelly integration loses access to them until you enter the new credentials: it will ask for them under Settings → Devices & services. The Shelly app and cloud keep working. The outcome arrives as a notification."
+          }
+        },
+        "abort": {
+          "no_password": "First store a password in Options → Tasmota (type or generate one): the same one is used for Shelly. Then come back here."
+        }
+      }
     },
     "tasmota_signal_drop": {
       "title": "Tasmota Wi-Fi signal dropped",
@@ -435,6 +448,16 @@
           "description": "Tasmota devices to set it on."
         }
       }
+    },
+    "apply_shelly_password": {
+      "name": "Set Shelly password",
+      "description": "Sets the password stored in LAN Guardian's options (the Tasmota one) on the chosen Shelly devices (all of them if none is chosen), with user admin. Skips protected ones; the password is not a parameter, so it never reaches the database.",
+      "fields": {
+        "device_id": {
+          "name": "Devices",
+          "description": "Shelly devices to set it on."
+        }
+      }
     }
   },
   "exceptions": {
@@ -446,6 +469,9 @@
     },
     "tasmota_unknown": {
       "message": "Unknown Tasmota or no IP: {mac}."
+    },
+    "shelly_unknown": {
+      "message": "Not a Shelly found by the security check: {mac}."
     },
     "not_a_tasmota": {
       "message": "Device {device_id} has no MAC address."

@@ -1,30 +1,42 @@
-"""Security coordinator: find Tasmota and Shelly devices, flag those without a password."""
+"""Security coordinator: find Tasmota and Shelly devices, flag and secure the open ones."""
 
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import timedelta
 import logging
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.util import dt as dt_util
 
 from ..const import (
     CONF_SECURITY_INTERVAL_HOURS,
     CONF_SHELLY_WARN_NO_PASSWORD,
+    CONF_TASMOTA_PASSWORD,
     CONF_TASMOTA_WARN_NO_PASSWORD,
     DOMAIN,
 )
 from ..issues import ISSUE_SHELLY_NO_PASSWORD, ISSUE_TASMOTA_NO_PASSWORD, sync_issues
-from ..notifier import EVENT_SHELLY_NO_PASSWORD, EVENT_TASMOTA_NO_PASSWORD, Notifier
+from ..notifier import (
+    EVENT_SHELLY_NO_PASSWORD,
+    EVENT_SHELLY_PASSWORD_APPLIED,
+    EVENT_TASMOTA_NO_PASSWORD,
+    Notifier,
+)
+from ..shelly.auth import ShellyError, async_guarded_status, async_set_password
 from ..shelly.probe import ShellyProbe, async_probe_shelly
+from ..tasmota.password import ApplyResult
 from ..tasmota.probe import ProbeResult, WebAuth, async_probe_tasmota
 
 if TYPE_CHECKING:
+    import aiohttp
     from homeassistant.config_entries import ConfigEntry
 
     from .scan import ScanCoordinator
@@ -76,6 +88,7 @@ class SecurityCoordinator(DataUpdateCoordinator[SecurityResult]):
             name=f"{DOMAIN} security",
             update_interval=timedelta(hours=int(options[CONF_SECURITY_INTERVAL_HOURS])),
         )
+        self.options = options
         self.scan = scan
         self.notifier = notifier
         self._semaphore = semaphore
@@ -178,6 +191,83 @@ class SecurityCoordinator(DataUpdateCoordinator[SecurityResult]):
             ISSUE_SHELLY_NO_PASSWORD,
             {ISSUE_SHELLY_NO_PASSWORD: placeholders} if open_macs else {},
             severity=ir.IssueSeverity.WARNING,
-            is_fixable=False,
+            is_fixable=True,
             learn_more_url="https://shelly-api-docs.shelly.cloud/gen2/General/Authentication",
         )
+
+    # -- Shelly password ---------------------------------------------------------------
+
+    def _shelly_name(self, mac: str) -> str:
+        if dev := self.scan.inventory.devices.get(mac):
+            return dev.display_name
+        return probe.ip if (probe := (self.data or SecurityResult()).shelly.get(mac)) else mac
+
+    async def async_apply_shelly_password(self, macs: Iterable[str] | None = None) -> ApplyResult:
+        """Set the stored global password on the given (default: all known) Shelly devices.
+
+        Same rules as the Tasmota WebPassword: the password never leaves the config entry.
+        """
+        password = str(self.options.get(CONF_TASMOTA_PASSWORD) or "")
+        if not password:
+            raise ServiceValidationError(translation_domain=DOMAIN, translation_key="no_password")
+        known = (self.data or SecurityResult()).shelly
+        session = async_get_clientsession(self.hass)
+        result = ApplyResult()
+        for mac in list(macs) if macs is not None else sorted(known):
+            name = self._shelly_name(mac)
+            if (probe := known.get(mac)) is None:
+                result.offline.append(name)
+                continue
+            # The IP may have changed since the last security check.
+            dev = self.scan.inventory.devices.get(mac)
+            ip = dev.ip if dev and dev.ip else probe.ip
+            async with self._semaphore:
+                outcome = await self._async_apply_shelly(session, probe, ip, password)
+            getattr(result, outcome).append(name)
+            _LOGGER.debug("Password on Shelly %s: %s", name, outcome)
+
+        none = "-"
+        await self.notifier.async_notify(
+            EVENT_SHELLY_PASSWORD_APPLIED,
+            dt_util.utcnow().isoformat(),  # every run is reported
+            {
+                "applied": ", ".join(result.applied) or none,
+                "already": ", ".join(result.already) or none,
+                "other": ", ".join(result.other_password) or none,
+                "offline": ", ".join(result.offline) or none,
+                "failed": ", ".join(result.failed) or none,
+            },
+        )
+        self.config_entry.async_create_background_task(
+            self.hass, self.async_refresh(), f"{DOMAIN} security after Shelly password"
+        )
+        return result
+
+    async def _async_apply_shelly(
+        self, session: aiohttp.ClientSession, probe: ShellyProbe, ip: str, password: str
+    ) -> str:
+        """Return the ApplyResult field this device belongs to."""
+        try:
+            status = await async_guarded_status(session, ip, probe.gen, None)
+            if status == 401:
+                status = await async_guarded_status(session, ip, probe.gen, password)
+                return "already" if status == 200 else "other_password"
+            if status != 200:
+                return "failed"
+        except ShellyError:
+            return "offline"
+
+        try:
+            await async_set_password(session, ip, probe.gen, probe.device_id, password)
+        except ShellyError as err:
+            # The answer may be lost while the setting went through: the checks decide.
+            _LOGGER.debug("Password on Shelly %s: no answer (%s)", ip, err)
+
+        try:
+            if await async_guarded_status(session, ip, probe.gen, None) != 401:
+                return "failed"  # still open
+            if await async_guarded_status(session, ip, probe.gen, password) != 200:
+                return "failed"
+        except ShellyError:
+            return "failed"
+        return "applied"

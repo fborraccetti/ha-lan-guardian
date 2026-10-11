@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Generator
 import copy
+import dataclasses
 import json
 from pathlib import Path
 from typing import Any
@@ -20,6 +21,7 @@ from custom_components.lan_guardian.const import (
 )
 from custom_components.lan_guardian.net.dns import DnsCheck
 from custom_components.lan_guardian.net.icmp import PingResult, ProbeMode
+from custom_components.lan_guardian.shelly.auth import ShellyError
 from custom_components.lan_guardian.shelly.probe import ShellyProbe
 from custom_components.lan_guardian.tasmota.client import TasmotaAuthError, TasmotaConnectionError
 from custom_components.lan_guardian.tasmota.firmware import FirmwareError, Release
@@ -130,6 +132,9 @@ class FakeNetwork:
         self.adblock_addresses: tuple[str, ...] = ("0.0.0.0",)
         self.tasmota: dict[str, WebAuth] = {"192.168.1.248": WebAuth.OPEN}
         self.shelly: dict[str, ShellyProbe] = {}
+        self.shelly_passwords: dict[str, str] = {}
+        self.shelly_ignore_password: set[str] = set()  # accepts the request, stays open
+        self.shelly_calls: list[tuple[str, str]] = []  # host, what
         # HTTP API of the Tasmota devices: Status 0 answers, WebPasswords, config dumps.
         self.tasmota_status: dict[str, dict[str, Any]] = {
             "192.168.1.248": load_fixture("status0_esp8266.json")
@@ -231,7 +236,30 @@ def fake_network() -> Generator[FakeNetwork]:
         return ProbeResult(ip=ip, auth=auth) if auth else None
 
     async def probe_shelly(session: object, ip: str, **kwargs: object) -> ShellyProbe | None:
-        return net.shelly.get(ip)
+        found = net.shelly.get(ip)
+        if found and ip in net.shelly_passwords:
+            return dataclasses.replace(found, auth=WebAuth.PROTECTED)
+        return found
+
+    async def shelly_status(
+        session: object, ip: str, gen: int, password: str | None, **kwargs: object
+    ) -> int:
+        net.shelly_calls.append((ip, "status"))
+        if ip not in net.shelly:
+            raise ShellyError(f"{ip}: ClientConnectorError")
+        expected = net.shelly_passwords.get(ip)
+        return 200 if expected is None or password == expected else 401
+
+    async def shelly_set(
+        session: object, ip: str, gen: int, device_id: str | None, password: str, **kwargs: object
+    ) -> None:
+        net.shelly_calls.append((ip, "set"))
+        if ip not in net.shelly:
+            raise ShellyError(f"{ip}: ClientConnectorError")
+        if ip in net.shelly_passwords:
+            raise ShellyError(f"{ip}: HTTP 401")
+        if ip not in net.shelly_ignore_password:
+            net.shelly_passwords[ip] = password
 
     async def latest_release(session: object) -> Release:
         net.release_checks += 1
@@ -255,6 +283,8 @@ def fake_network() -> Generator[FakeNetwork]:
         patch(f"{health}.async_resolve", side_effect=resolve),
         patch(f"{security}.async_probe_tasmota", side_effect=probe),
         patch(f"{security}.async_probe_shelly", side_effect=probe_shelly),
+        patch(f"{security}.async_guarded_status", side_effect=shelly_status),
+        patch(f"{security}.async_set_password", side_effect=shelly_set),
         patch(f"{tasmota}.TasmotaClient", client_cls),
         patch(f"{tasmota}.BACKUP_RETRY_DELAY", 0),
         patch(f"{tasmota}.async_fetch_latest_release", side_effect=latest_release),
